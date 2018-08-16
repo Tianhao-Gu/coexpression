@@ -1,9 +1,9 @@
 {
   "name" : "View Multi-cluster Heatmap",
-  "ver" : "1.0.0",
+  "ver" : "1.0.4",
   "authors" : [ ],
   "contact" : "help@kbase.us",
-  "visble" : true,
+  "visible" : true,
   "categories" : ["active","expression"],
   "widgets" : {
     "input" : null,

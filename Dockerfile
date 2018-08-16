@@ -1,21 +1,23 @@
-FROM kbase/kbase:sdkbase.latest
-MAINTAINER KBase Developer
-# Install the SDK (should go away eventually)
+FROM kbase/kbase:sdkbase2.latest 
+MAINTAINER KBase Developer 
+
 RUN \
   . /kb/dev_container/user-env.sh && \
   cd /kb/dev_container/modules && \
-  rm -rf jars && \
-  git clone https://github.com/kbase/jars && \
-  rm -rf kb_sdk && \
-  git clone https://github.com/kbase/kb_sdk -b develop && \
   rm -rf transform && \
   git clone https://github.com/kbase/transform && \
-  cd /kb/dev_container/modules/jars && \
-  make deploy && \
-  cd /kb/dev_container/modules/kb_sdk && \
-  make && make deploy && \
-  cd /kb/dev_container/modules/transform && \
-  make && make deploy 
+  rm -rf workspace_deluxe && \
+  git clone https://github.com/kbase/workspace_deluxe && \
+  cd /kb/dev_container/modules/workspace_deluxe && \
+  cp -rv lib/* /kb/deployment/lib/
+
+RUN \
+  . /kb/dev_container/user-env.sh && \
+  cd /kb/dev_container/modules && \
+  rm -rf coex_helper && \
+  git clone https://github.com/sjyoo/coex_helper && \
+  cd /kb/dev_container/modules/coex_helper && \
+  make update-R
 
 ####END OF KBASE #############################
 #apt-get update && apt-get install -y ant && \
@@ -23,22 +25,28 @@ RUN \
 # Insert apt-get instructions here to install
 # any required dependencies for your module.
 # -----------------------------------------
-RUN apt-get update && apt-get install -y unzip gcc bzip2 ncurses-dev
-RUN pip install mpipe
-RUN pip install pandas numpy
-WORKDIR /kb/module
-COPY ./deps /kb/deps
-### R install docker file: https://github.com/rocker-org/rocker/blob/master/rstudio/Dockerfile
-# the following would not correctly have TARGET, so that the installation would be unused in the end
 #RUN \
 #  . /kb/dev_container/user-env.sh && \
-#  bash /kb/deps/WGCNA/install-r-packages.sh 
+#  cd /kb/dev_container/modules/coex_helper && \
+#  make update-R 
 
-COPY ./ /kb/module
 RUN \
-  . /kb/dev_container/user-env.sh && \
-  cd /kb/module && \
-  make update-R 
+  apt-get update && \
+  apt-get install -y bzip2 \
+                     gcc \
+		     ncurses-dev \
+		     tofrodos \
+		     unzip 
+RUN pip install mpipe
+RUN pip install pandas numpy
+RUN pip install coverage
+WORKDIR /kb/module
+COPY ./deps /kb/deps
+COPY ./ /kb/module
+RUN chmod -R a+rw /kb/module
+RUN chmod +x /kb/module/ltest/script_test/run_tests.sh
+# Windows compatibility line
+#RUN bash -c "for i in `find . -name '*.sh'`; do dos2unix -v $i; done"
 RUN \
   . /kb/dev_container/user-env.sh && \
   cd /kb/module && \

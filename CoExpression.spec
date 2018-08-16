@@ -16,6 +16,14 @@ module CoExpression
   typedef string obj_ref;
 
   /*
+     Object for Report type
+  */
+  typedef structure {
+    string report_name;
+    string report_ref;
+  }ResultsToReport;
+
+  /*
       Designed to support for p-value distribution plot to give idea on what would be good p-value cut off but it can be used for other purpose.
       @optional xlabel ylabel xlog_mode ylog_mode title description plot_type properties 
   */
@@ -59,7 +67,7 @@ module CoExpression
   The replicate information is manully extracted by KBase developers. Only a part of samples has been assigned to a replicate group. For those samples without an assignment, the variation of its expression abundance is used directly.
   filter_genes now has two methods to identify differentially expressed genes: ANOVA and lor(from limma r package). The output of this function is a reduced FV expression matrix and a FV FeatureSet*/
   
-  async funcdef filter_genes(FilterGenesParams args) returns (FilterGenesResult result);
+  async funcdef filter_genes(FilterGenesParams args) returns (ResultsToReport result);
 
   typedef structure {
     string workspace_name; /* workspace name*/
@@ -82,7 +90,7 @@ module CoExpression
   const_coex_net_clust provides the function to build coexpression network and identify the functional modules among it.
   A functional module is a network cluster with enrichment of certain biological function. const_coex_net_clust first construct coexpression network. Then, it identifys the clusters among the network. Finally, it identifys the GeneOntology enrichment for the genes in each cluster.
   */
-  async funcdef const_coex_net_clust(ConstCoexNetClustParams args) returns (ConstCoexNetClustResult result);
+  async funcdef const_coex_net_clust(ConstCoexNetClustParams args) returns (ResultsToReport result);
 
   
   async funcdef view_heatmap(FilterGenesParams args) returns (FilterGenesResult result);

@@ -27,6 +27,7 @@ if [ "$c" == 0 ]; then
     sudo apt-get -y install r-base
 fi
 
+
 mkdir -p $dest/lib/R/library # for sanity and it actually does not use the created folder
 # the kb runtime execution environment has the following variable was set
 export R_LIBS=$dest/lib

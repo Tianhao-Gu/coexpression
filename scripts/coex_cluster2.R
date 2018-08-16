@@ -36,7 +36,7 @@ coex_net = function(data, geneList1 = NULL, geneList2 = NULL, method = 'simple',
   } else if (method == 'WGCNA' || method == 'w') {
     datExpr = t(data)
     suppressPackageStartupMessages(library('WGCNA', quiet = TRUE)); options(stringsAsFactors=FALSE)
-    allowWGCNAThreads()
+    allowWGCNAThreads() # docker node has two thread and it is temporary fix
     powers = c(1:maxpower)
     #powers = c(c(1:20),seq(from=1, to=20,by=2))
     #print(powers)

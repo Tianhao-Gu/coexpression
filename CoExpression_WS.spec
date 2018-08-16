@@ -24,6 +24,27 @@ module CoExpression
     obj_ref original_data; /* original data object */
   } FigureProperties;
 
+  /* @id ws CoExpression.FigureProperties */
+  typedef string ws_figure_properties;
+
+  /*
+      Multi-cluster heat map plot object
+      @optional description
+  */
+  typedef structure {
+    ws_figure_properties figure_obj;
+    string description;
+  } MulticlusterHeatmapPlot;
+
+  /*
+      P-value distribution plot
+      @optional description
+  */
+  typedef structure {
+    ws_figure_properties figure_obj;
+    string description;
+  } PvalueDistributionPlot;
+
 };
 
 

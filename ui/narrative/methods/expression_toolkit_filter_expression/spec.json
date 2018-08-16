@@ -3,7 +3,7 @@
   "ver" : "1.0.0",
   "authors" : [ ],
   "contact" : "help@kbase.us",
-  "visble" : true,
+  "visible" : true,
   "categories" : ["active","expression"],
   "widgets" : {
     "input" : null,
@@ -60,7 +60,8 @@
       "default_values" : [ "" ],
       "field_type" : "text",
       "text_options" : {
-        "valid_ws_types" : [ ]
+        "valid_ws_types" : [ "KBaseFeatureValues.ExpressionMatrix" ],
+        "is_output_name": true
       }
     }, {
       "id" : "filtered_featureset",
@@ -70,7 +71,8 @@
       "default_values" : [ "" ],
       "field_type" : "text",
       "text_options" : {
-        "valid_ws_types" : [ ]
+        "valid_ws_types" : [ "KBaseCollections.FeatureSet" ],
+        "is_output_name": true
       }
     }, {
       "id" : "p_value",
