@@ -8,8 +8,8 @@ service-language:
     python
 
 module-version:
-    1.2.2
+    1.2.3
 
 owners:
-    [sjyoo, plane83, srividya22, arfath]
+    [sjyoo, plane83, srividya22, arfath, tgu2]
 
