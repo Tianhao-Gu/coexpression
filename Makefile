@@ -1,136 +1,66 @@
-TOP_DIR ?= /kb/dev_container
-TOP_DIR_NAME = $(shell basename $(TOP_DIR))
-DEPLOY_RUNTIME?=/kb/runtime
-TARGET ?= /kb/deployment
-SERVICE_SPEC = CoExpression.spec
-SERVICE_NAME = CoExpression
-SERVICE_DIR = $(TARGET)/services/$(SERVICE_NAME)
-#SERVICE = CoExpressionService
-SERVICE_URL = https://kbase.us/services/CoExpression
-SERVICE_PORT = 7063
-
-TPAGE = $(DEPLOY_RUNTIME)/bin/tpage
-TPAGE_ARGS = --define kb_top=$(TARGET) --define kb_runtime=$(DEPLOY_RUNTIME) --define kb_service_name=$(SERVICE_NAME) \
-        --define kb_service_port=$(SERVICE_PORT)
-
+SERVICE = CoExpression
+SERVICE_CAPS = CoExpression
+SPEC_FILE = CoExpression.spec
+URL = https://kbase.us/services/CoExpression
 DIR = $(shell pwd)
-CONTAINER_DIR = $(shell readlink -f ../.. )
-CONTAINER_DIR_NAME = $(shell basename $(CONTAINER_DIR))
-
 LIB_DIR = lib
+SCRIPTS_DIR = scripts
+TEST_DIR = test
 LBIN_DIR = bin
-EXECUTABLE_SCRIPT_NAME = run_$(SERVICE_NAME).sh
-TEST_DIR = ltest
+WORK_DIR = /kb/module/work/tmp
+EXECUTABLE_SCRIPT_NAME = run_$(SERVICE_CAPS)_async_job.sh
+STARTUP_SCRIPT_NAME = start_server.sh
+TEST_SCRIPT_NAME = run_tests.sh
 
+.PHONY: test
 
-default: compile build-executable-script-python
+default: compile
 
-include $(TOP_DIR)/tools/Makefile.common
-include $(TOP_DIR)/tools/Makefile.common.rules
-####
-# Warning: Inside Docker, KB_TOP is KB_TARGET, /kb/deployment instead of /kb/dev_container
-#          But, the following assumes KB_TOP contains dev_container/bin for succussful make behavior
-#          If everything is transitioned to kb_sdk, then it is fine...
-build-executable-script-python: setup-local-dev-kb-py-libs
-	mkdir -p $(LBIN_DIR)
-	echo '#!/bin/bash' > $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
-	echo 'export KB_DEPLOYMENT_CONFIG="$(DIR)/deploy.cfg"' >> $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
-	echo 'export KB_SERVICE_NAME="$(SERVICE_NAME)"' >> $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
-	echo 'export PYTHONPATH="$(DIR)/$(LIB_DIR)"' >> $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
-	echo 'python $(DIR)/lib/biokbase/$(SERVICE_NAME)/$(SERVICE_NAME).py $$1 $$2 $$3' \
-		>> $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
-	chmod +x $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
-ifeq ($(CONTAINER_DIR_NAME), dev_container)
-	cp $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME) $(TOP_DIR)/bin/.
-else
-	cp $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME) $(KB_TOP)/bin/.
-endif
-
-setup-local-dev-kb-py-libs:
-	touch lib/biokbase/__init__.py
-	touch lib/biokbase/$(SERVICE_NAME)/__init__.py
-ifeq ($(CONTAINER_DIR_NAME), dev_container)
-	-rsync -vrh $(TOP_DIR)/modules/kbapi_common/lib/biokbase/* lib/biokbase/.
-	-rsync -vrh $(TOP_DIR)/modules/auth/lib/biokbase/* lib/biokbase/.
-	-rsync -vrh $(TOP_DIR)/modules/handle_service/lib/biokbase/* lib/biokbase/.
-	-rsync -vrh $(TOP_DIR)/modules/workspace_deluxe/lib/biokbase/* lib/biokbase/.
-	-rsync -vrh $(TOP_DIR)/modules/transform/lib/biokbase/* lib/biokbase/.
-else
-# Assume dev_container is on the same level of $KB_TOP, which works for KB_TOP=/mnt/kb/runtime and TOP_DIR=/mnt/kb/dev_container
-# NEXT version will be using submodule, then no assumption
-	-rsync -vrh $(KB_TOP)/../dev_container/modules/kbapi_common/lib/biokbase/* lib/biokbase/.
-	-rsync -vrh $(KB_TOP)/../dev_container/modules/auth/lib/biokbase/* lib/biokbase/.
-	-rsync -vrh $(KB_TOP)/../dev_container/modules/handle_service/lib/biokbase/* lib/biokbase/.
-	-rsync -vrh $(KB_TOP)/../dev_container/modules/workspace_deluxe/lib/biokbase/* lib/biokbase/.
-	-rsync -vrh $(KB_TOP)/../dev_container/modules/transform/lib/biokbase/* lib/biokbase/.
-endif
-
-update-R:
-	export TARGET=$(TARGET) && export R_LIBS=$(TARGET)/lib && R --vanilla --slave -e "library('WGCNA')" &&  \
-        if [ $$? -ne 0 ] ; then  $(DIR)/deps/WGCNA/install-r-packages.sh ; else echo "WGCNA is installed on $(TARGET)/lib"; fi
-	
-dk-build:
-	docker build -t kbase/coex:test .
-
-dk-bash:
-	docker run -it --rm --entrypoint bash kbase/coex:test
-
-deploy: deploy-scripts
-
-deploy-scripts: deploy-libs deploy-executable-script 
-
-deploy-service: deploy-libs deploy-executable-script deploy-service-scripts deploy-cfg
-
-#deploy-libs:
-#	@echo "Deploying libs to target: $(TARGET)"
-#	mkdir -p $(TARGET)/lib/biokbase
-#	rsync -vrh lib/biokbase/$(MODULE) $(TARGET)/lib/biokbase/.
-
-deploy-executable-script:
-	@echo "Installing executable scripts to target: $(TARGET)/bin"
-	echo '#!/bin/bash' > $(TARGET)/bin/$(EXECUTABLE_SCRIPT_NAME)
-	echo 'export KB_RUNTIME=$(DEPLOY_RUNTIME)' >> $(TARGET)/bin/$(EXECUTABLE_SCRIPT_NAME)
-	echo 'export PYTHONPATH="$(TARGET)/lib"' >> $(TARGET)/bin/$(EXECUTABLE_SCRIPT_NAME)
-	echo 'python $(TARGET)/lib/biokbase/$(SERVICE_NAME)/$(SERVICE_NAME).py $$1 $$2 $$3' \
-		>> $(TARGET)/bin/$(EXECUTABLE_SCRIPT_NAME)
-	chmod +x $(TARGET)/bin/$(EXECUTABLE_SCRIPT_NAME)
-
-# Test Section
-
-
-test: test-impl create-test-wrapper
-
-
-test-impl: create-test-wrapper
-	./$(TEST_DIR)/script_test/run_tests.sh
-	coverage report -m
-	cp .coverage work/
-	mkdir -p work/kb/deployment/lib
-	cp -R /kb/deployment/lib/biokbase work/kb/deployment/lib
-
-create-test-wrapper:
-	@echo "Creating test script wrapper"
-ifeq ($(CONTAINER_DIR_NAME), dev_container)
-	echo '#!/bin/bash' > $(TEST_DIR)/script_test/run_tests.sh
-	echo 'export PATH=$(PATH):$(TARGET)/bin' >> $(TEST_DIR)/script_test/run_tests.sh
-	echo 'export KB_RUNTIME=$(DEPLOY_RUNTIME)' >> $(TEST_DIR)/script_test/run_tests.sh
-	echo 'export PYTHONPATH="$(DIR)/$(LIB_DIR)"' >> $(TEST_DIR)/script_test/run_tests.sh
-else
-	echo '#!/bin/bash' > $(TEST_DIR)/script_test/run_tests.sh
-	echo 'export PATH=$(PATH):$(TARGET)/bin' >> $(TEST_DIR)/script_test/run_tests.sh
-	echo 'export KB_RUNTIME=$(DEPLOY_RUNTIME)' >> $(TEST_DIR)/script_test/run_tests.sh
-	echo 'export PYTHONPATH="$(TARGET)/lib"' >> $(TEST_DIR)/script_test/run_tests.sh
-	echo 'export KB_SERVICE_NAME="$(SERVICE_NAME)"' >> $(TEST_DIR)/script_test/run_tests.sh
-	echo 'export KB_DEPLOYMENT_CONFIG="$(DIR)/deploy.cfg"' >> $(TEST_DIR)/script_test/run_tests.sh # TODO: not sure about this line
-endif
-	echo 'coverage run $(DIR)/$(TEST_DIR)/script_test/basic_test.py $$1 $$2 $$3' \
-		>> $(TEST_DIR)/script_test/run_tests.sh
-#	chmod +x $(TEST_DIR)/script_test/run_tests.sh
-
+all: compile build build-startup-script build-executable-script build-test-script
 
 compile:
-	mkdir -p scripts; kb-sdk compile $(SERVICE_SPEC)\
-		--out lib\
-		--pyclname biokbase.$(SERVICE_NAME).$(SERVICE_NAME)Client \
-		--pysrvname biokbase.$(SERVICE_NAME).$(SERVICE_NAME) \
-		--pyimplname biokbase.$(SERVICE_NAME).$(SERVICE_NAME)Impl;
+	kb-sdk compile $(SPEC_FILE) \
+		--out $(LIB_DIR) \
+		--pysrvname $(SERVICE_CAPS).$(SERVICE_CAPS)Server \
+		--pyimplname $(SERVICE_CAPS).$(SERVICE_CAPS)Impl;
+
+build:
+	chmod +x $(SCRIPTS_DIR)/entrypoint.sh
+
+build-executable-script:
+	mkdir -p $(LBIN_DIR)
+	echo '#!/bin/bash' > $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
+	echo 'script_dir=$$(dirname "$$(readlink -f "$$0")")' >> $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
+	echo 'export PYTHONPATH=$$script_dir/../$(LIB_DIR):$$PATH:$$PYTHONPATH' >> $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
+	echo 'python -u $$script_dir/../$(LIB_DIR)/$(SERVICE_CAPS)/$(SERVICE_CAPS)Server.py $$1 $$2 $$3' >> $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
+	chmod +x $(LBIN_DIR)/$(EXECUTABLE_SCRIPT_NAME)
+
+build-startup-script:
+	mkdir -p $(LBIN_DIR)
+	echo '#!/bin/bash' > $(SCRIPTS_DIR)/$(STARTUP_SCRIPT_NAME)
+	echo 'script_dir=$$(dirname "$$(readlink -f "$$0")")' >> $(SCRIPTS_DIR)/$(STARTUP_SCRIPT_NAME)
+	echo 'export KB_DEPLOYMENT_CONFIG=$$script_dir/../deploy.cfg' >> $(SCRIPTS_DIR)/$(STARTUP_SCRIPT_NAME)
+	echo 'export PYTHONPATH=$$script_dir/../$(LIB_DIR):$$PATH:$$PYTHONPATH' >> $(SCRIPTS_DIR)/$(STARTUP_SCRIPT_NAME)
+	echo 'uwsgi --master --processes 5 --threads 5 --http :5000 --wsgi-file $$script_dir/../$(LIB_DIR)/$(SERVICE_CAPS)/$(SERVICE_CAPS)Server.py' >> $(SCRIPTS_DIR)/$(STARTUP_SCRIPT_NAME)
+	chmod +x $(SCRIPTS_DIR)/$(STARTUP_SCRIPT_NAME)
+
+build-test-script:
+	echo '#!/bin/bash' > $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'script_dir=$$(dirname "$$(readlink -f "$$0")")' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'export KB_DEPLOYMENT_CONFIG=$$script_dir/../deploy.cfg' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'export KB_AUTH_TOKEN=`cat /kb/module/work/token`' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'echo "Removing temp files..."' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'rm -rf $(WORK_DIR)/*' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'echo "...done removing temp files."' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'export PYTHONPATH=$$script_dir/../$(LIB_DIR):$$PATH:$$PYTHONPATH' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'cd $$script_dir/../$(TEST_DIR)' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	echo 'python -m nose --with-coverage --cover-package=$(SERVICE_CAPS) --cover-html --cover-html-dir=/kb/module/work/test_coverage --nocapture  --nologcapture .' >> $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+	chmod +x $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+
+test:
+	if [ ! -f /kb/module/work/token ]; then echo -e '\nOutside a docker container please run "kb-sdk test" rather than "make test"\n' && exit 1; fi
+	bash $(TEST_DIR)/$(TEST_SCRIPT_NAME)
+
+clean:
+	rm -rfv $(LBIN_DIR)
+
