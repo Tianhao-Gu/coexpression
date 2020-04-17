@@ -1,23 +1,30 @@
-FROM kbase/kbase:sdkbase2.latest 
-MAINTAINER KBase Developer 
+FROM kbase/sdkbase2:python
+MAINTAINER KBase Developer
 
-RUN \
-  . /kb/dev_container/user-env.sh && \
-  cd /kb/dev_container/modules && \
-  rm -rf transform && \
-  git clone https://github.com/kbase/transform && \
-  rm -rf workspace_deluxe && \
-  git clone https://github.com/kbase/workspace_deluxe && \
-  cd /kb/dev_container/modules/workspace_deluxe && \
-  cp -rv lib/* /kb/deployment/lib/
+#RUN \
+#  . /kb/dev_container/user-env.sh && \
+#  cd /kb/dev_container/modules && \
+#  rm -rf transform && \
+#  git clone https://github.com/kbase/transform && \
+#  rm -rf workspace_deluxe && \
+#  git clone https://github.com/kbase/workspace_deluxe && \
+#  cd /kb/dev_container/modules/workspace_deluxe && \
+#  cp -rv lib/* /kb/deployment/lib/
 
-RUN \
-  . /kb/dev_container/user-env.sh && \
-  cd /kb/dev_container/modules && \
-  rm -rf coex_helper && \
-  git clone https://github.com/sjyoo/coex_helper && \
-  cd /kb/dev_container/modules/coex_helper && \
-  make update-R
+#RUN \
+#  . /kb/dev_container/user-env.sh && \
+#  cd /kb/dev_container/modules && \
+#  rm -rf coex_helper && \
+#  git clone https://github.com/sjyoo/coex_helper && \
+#  cd /kb/dev_container/modules/coex_helper && \
+#  make update-R
+
+# R related installations
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys FCAE2A0E115C3D8A
+RUN echo 'deb https://cloud.r-project.org/bin/linux/debian stretch-cran35/' >> /etc/apt/sources.list
+
+RUN apt-get update
+RUN apt-get install -y r-base r-base-dev
 
 ####END OF KBASE #############################
 #apt-get update && apt-get install -y ant && \
@@ -28,7 +35,7 @@ RUN \
 #RUN \
 #  . /kb/dev_container/user-env.sh && \
 #  cd /kb/dev_container/modules/coex_helper && \
-#  make update-R 
+#  make update-R
 
 RUN \
   apt-get update && \
@@ -36,9 +43,10 @@ RUN \
                      gcc \
 		     ncurses-dev \
 		     tofrodos \
-		     unzip 
+		     unzip
 RUN pip install mpipe
-RUN pip install pandas numpy
+RUN pip install pandas
+RUN pip install numpy
 RUN pip install coverage
 WORKDIR /kb/module
 COPY ./deps /kb/deps
@@ -47,10 +55,10 @@ RUN chmod -R a+rw /kb/module
 RUN chmod +x /kb/module/ltest/script_test/run_tests.sh
 # Windows compatibility line
 #RUN bash -c "for i in `find . -name '*.sh'`; do dos2unix -v $i; done"
-RUN \
-  . /kb/dev_container/user-env.sh && \
-  cd /kb/module && \
-  make && make deploy
+#RUN \
+#  . /kb/dev_container/user-env.sh && \
+#  cd /kb/module && \
+#  make && make deploy
 #  rm -rf narrative_method_store \
 ENV PATH=$PATH:/kb/dev_container/modules/kb_sdk/bin
 WORKDIR /kb/module
